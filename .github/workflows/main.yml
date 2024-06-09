@@ -24,4 +24,4 @@ jobs:
           distribution: 'adopt'
 
       - name: Build TechCorp project
-        run: mvn -f Atelier2/pom.xml clean test
+        run: mvn -f pom.xml clean test
