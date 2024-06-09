@@ -1,8 +1,7 @@
 package org.atelier1.model;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.List;
 
 public class Employee {
     private Long id;
@@ -10,16 +9,17 @@ public class Employee {
     private String lastName;
     private String email;
     private String position;
-    private Date hireDate;
-    private Set<String> projects = new HashSet<>();
+    private LocalDate hireDate;
+    private List<String> projects;
 
-    public Employee(Long id, String firstName, String lastName, String email, String position, Date hireDate) {
+    public Employee(Long id, String firstName, String lastName, String email, String position, LocalDate hireDate, List<String> projects) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.position = position;
         this.hireDate = hireDate;
+        this.projects = projects;
     }
 
     // Getters and Setters
@@ -64,19 +64,19 @@ public class Employee {
         this.position = position;
     }
 
-    public Date getHireDate() {
+    public LocalDate getHireDate() {
         return hireDate;
     }
 
-    public void setHireDate(Date hireDate) {
+    public void setHireDate(LocalDate hireDate) {
         this.hireDate = hireDate;
     }
 
-    public Set<String> getProjects() {
+    public List<String> getProjects() {
         return projects;
     }
 
-    public void setProjects(Set<String> projects) {
+    public void setProjects(List<String> projects) {
         this.projects = projects;
     }
 }

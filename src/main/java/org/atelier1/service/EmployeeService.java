@@ -5,18 +5,19 @@ import org.atelier1.exception.EmailAlreadyExistsException;
 import org.atelier1.exception.EmployeeNotFoundException;
 import org.atelier1.model.Employee;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class EmployeeService {
-    private Map<Long, Employee> employeeDatabase = new HashMap<>();
+    public Map<Long, Employee> employeeDatabase = new HashMap<>();
     private Long idCounter = 1L;
 
-    public Employee addEmployee(String firstName, String lastName, String email, String position, Date hireDate) {
+    public Employee addEmployee(String firstName, String lastName, String email, String position, LocalDate hireDate) {
         if (employeeDatabase.values().stream().anyMatch(emp -> emp.getEmail().equals(email))) {
-            throw new EmailAlreadyExistsException("Email already exists: " + email);
+            throw new EmailAlreadyExistsException("Employee with email " + email + " already exists.");
         }
-        Employee employee = new Employee(idCounter++, firstName, lastName, email, position, hireDate);
+        Employee employee = new Employee(idCounter++, firstName, lastName, email, position, hireDate, new ArrayList<>());
         employeeDatabase.put(employee.getId(), employee);
         return employee;
     }
@@ -26,13 +27,13 @@ public class EmployeeService {
         if (employee == null) {
             throw new EmployeeNotFoundException("Employee not found with id: " + id);
         }
-        if (employee.getPosition().equalsIgnoreCase("admin") && isOnlyAdmin()) {
+        if ("ADMIN".equals(employee.getPosition()) && employeeDatabase.values().stream().filter(emp -> "ADMIN".equals(emp.getPosition())).count() == 1) {
             throw new CannotDeleteAdminException("Cannot delete the only admin.");
         }
         employeeDatabase.remove(id);
     }
 
-    public Employee updateEmployee(Long id, String firstName, String lastName, String email, String position, Date hireDate) {
+    public Employee updateEmployee(Long id, String firstName, String lastName, String email, String position, LocalDate hireDate) {
         Employee employee = employeeDatabase.get(id);
         if (employee == null) {
             throw new EmployeeNotFoundException("Employee not found with id: " + id);
@@ -61,21 +62,17 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
-    public void assignProjects(Long id, Set<String> projects) {
+    public void assignProjectsToEmployee(Long id, List<String> projects) {
         Employee employee = employeeDatabase.get(id);
         if (employee == null) {
             throw new EmployeeNotFoundException("Employee not found with id: " + id);
         }
+        List<String> currentProjects = (List<String>) employee.getProjects();
         for (String project : projects) {
-            if (!employee.getProjects().contains(project)) {
-                employee.getProjects().add(project);
+            if (!currentProjects.contains(project)) {
+                currentProjects.add(project);
             }
         }
-    }
-
-    private boolean isOnlyAdmin() {
-        return employeeDatabase.values().stream()
-                .filter(emp -> emp.getPosition().equalsIgnoreCase("admin"))
-                .count() == 1;
+        employee.setProjects((List<String>) currentProjects);
     }
 }

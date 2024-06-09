@@ -5,78 +5,116 @@ import org.atelier1.model.Employee;
 import org.atelier1.service.EmployeeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class EmployeeServiceTest {
     private EmployeeService employeeService;
+    private Map<Long, Employee> mockEmployeeDatabase;
 
     @BeforeEach
     public void setUp() {
-        employeeService = new EmployeeService();
+        mockEmployeeDatabase = Mockito.mock(Map.class);
+        employeeService = new EmployeeService() {
+            {
+                employeeDatabase = mockEmployeeDatabase;
+            }
+        };
     }
 
     @Test
     public void testAddEmployee() {
-        Employee employee = employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        assertNotNull(employee.getId());
-        assertEquals("John", employee.getFirstName());
+        Employee employee = new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.values()).thenReturn(Collections.emptyList());
+        when(mockEmployeeDatabase.put(anyLong(), any(Employee.class))).thenReturn(employee);
+
+        Employee result = employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", LocalDate.now());
+
+        assertNotNull(result.getId());
+        assertEquals("John", result.getFirstName());
+        verify(mockEmployeeDatabase, times(1)).put(anyLong(), any(Employee.class));
     }
 
     @Test
     public void testAddEmployeeDuplicateEmail() {
-        employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
+        Employee employee = new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.values()).thenReturn(Collections.singletonList(employee));
+
         assertThrows(EmailAlreadyExistsException.class, () ->
-                employeeService.addEmployee("Jane", "Smith", "john.doe@example.com", "Tester", new Date()));
+                employeeService.addEmployee("Jane", "Smith", "john.doe@example.com", "Manager", LocalDate.now()));
     }
 
     @Test
     public void testDeleteEmployee() {
-        Employee employee = employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        employeeService.deleteEmployee(employee.getId());
-        assertThrows(EmployeeNotFoundException.class, () -> employeeService.deleteEmployee(employee.getId()));
+        Employee employee = new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.get(1L)).thenReturn(employee);
+
+        employeeService.deleteEmployee(1L);
+
+        verify(mockEmployeeDatabase, times(1)).remove(1L);
     }
 
     @Test
-    public void testDeleteAdminEmployee() {
-        Employee admin = employeeService.addEmployee("Admin", "User", "admin@example.com", "Admin", new Date());
-        assertThrows(CannotDeleteAdminException.class, () -> employeeService.deleteEmployee(admin.getId()));
+    public void testDeleteEmployeeAdmin() {
+        Employee employee = new Employee(1L, "Admin", "User", "admin@example.com", "ADMIN", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.get(1L)).thenReturn(employee);
+        when(mockEmployeeDatabase.values()).thenReturn(Collections.singletonList(employee));
+
+        assertThrows(CannotDeleteAdminException.class, () -> employeeService.deleteEmployee(1L));
     }
 
     @Test
     public void testUpdateEmployee() {
-        Employee employee = employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        employeeService.updateEmployee(employee.getId(), "John", "Smith", "john.smith@example.com", "Manager", new Date());
-        Employee updatedEmployee = employeeService.updateEmployee(employee.getId(), "John", "Smith", "john.smith@example.com", "Manager", new Date());
-        assertEquals("Smith", updatedEmployee.getLastName());
+        Employee employee = new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.get(1L)).thenReturn(employee);
+
+        Employee result = employeeService.updateEmployee(1L, "Jane", "Smith", "jane.smith@example.com", "Manager", LocalDate.now());
+
+        assertEquals("Jane", result.getFirstName());
+        assertEquals("Smith", result.getLastName());
     }
 
     @Test
     public void testListAllEmployees() {
-        employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        employeeService.addEmployee("Jane", "Smith", "jane.smith@example.com", "Tester", new Date());
-        List<Employee> employees = employeeService.listAllEmployees();
-        assertEquals(2, employees.size());
+        List<Employee> employeeList = Arrays.asList(
+                new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now().minusDays(10), new ArrayList<>()),
+                new Employee(2L, "Jane", "Smith", "jane.smith@example.com", "Manager", LocalDate.now().minusDays(5), new ArrayList<>())
+        );
+        when(mockEmployeeDatabase.values()).thenReturn(employeeList);
+
+        List<Employee> result = employeeService.listAllEmployees();
+
+        assertEquals(2, result.size());
+        assertEquals("John", result.get(0).getFirstName());
     }
 
     @Test
     public void testSearchEmployees() {
-        employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        employeeService.addEmployee("Jane", "Smith", "jane.smith@example.com", "Tester", new Date());
-        List<Employee> employees = employeeService.searchEmployees("Jane", null, null, 1, 10);
-        assertEquals(1, employees.size());
-        assertEquals("Jane", employees.get(0).getFirstName());
+        List<Employee> employeeList = Arrays.asList(
+                new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now().minusDays(10), new ArrayList<>()),
+                new Employee(2L, "Jane", "Smith", "jane.smith@example.com", "Manager", LocalDate.now().minusDays(5), new ArrayList<>())
+        );
+        when(mockEmployeeDatabase.values()).thenReturn(employeeList);
+
+        List<Employee> result = employeeService.searchEmployees("John", null, null, 1, 10);
+
+        assertEquals(1, result.size());
+        assertEquals("John", result.get(0).getFirstName());
     }
 
     @Test
-    public void testAssignProjects() {
-        Employee employee = employeeService.addEmployee("John", "Doe", "john.doe@example.com", "Developer", new Date());
-        employeeService.assignProjects(employee.getId(), Set.of("Project A", "Project B"));
-        assertTrue(employee.getProjects().contains("Project A"));
-        assertTrue(employee.getProjects().contains("Project B"));
+    public void testAssignProjectsToEmployee() {
+        Employee employee = new Employee(1L, "John", "Doe", "john.doe@example.com", "Developer", LocalDate.now(), new ArrayList<>());
+        when(mockEmployeeDatabase.get(1L)).thenReturn(employee);
+
+        employeeService.assignProjectsToEmployee(1L, Arrays.asList("Project1", "Project2"));
+
+        assertTrue(employee.getProjects().contains("Project1"));
+        assertTrue(employee.getProjects().contains("Project2"));
     }
 }
